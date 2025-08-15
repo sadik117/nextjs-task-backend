@@ -39,17 +39,34 @@ async function run() {
         const { title, startAt, endAt, location, description, image } =
           req.body;
 
-        // Basic validation
         if (!title || !startAt || !endAt || !location || !description) {
           return res
             .status(400)
             .json({ error: "All required fields must be filled" });
         }
 
+        // Convert to Date objects
+        const startDate = new Date(startAt);
+        const endDate = new Date(endAt);
+
+        // Helper to format AM/PM display
+        const formatAMPM = (date) =>
+          date.toLocaleString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
         const newEvent = {
           title,
-          startAt: new Date(startAt), 
-          endAt: new Date(endAt),
+          startAt: startDate,
+          endAt: endDate,
+          startAtFormatted: formatAMPM(startDate),
+          endAtFormatted: formatAMPM(endDate),
           location,
           description,
           image,
@@ -57,16 +74,19 @@ async function run() {
         };
 
         const result = await eventsCollection.insertOne(newEvent);
-        res
-          .status(201)
-          .json({
-            message: "Event added successfully",
-            eventId: result.insertedId,
-          });
+        res.status(201).json({
+          message: "Event added successfully",
+          eventId: result.insertedId,
+        });
       } catch (err) {
         console.error("Error adding event:", err);
         res.status(500).json({ error: "Server error while adding event" });
       }
+    });
+
+    app.get("/events", async (req, res) => {
+      const events = await eventsCollection.find().toArray();
+      res.json(events);
     });
 
     // Send a ping to confirm a successful connection
